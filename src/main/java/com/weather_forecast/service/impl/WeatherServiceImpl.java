@@ -46,7 +46,6 @@ public class WeatherServiceImpl implements WeatherService {
                     ResponseEntity<WeatherForecast> responseEntity = restTemplate.getForEntity(apiUrl, WeatherForecast.class);
                     return responseEntity.getBody();
                 } catch (RuntimeException e) {
-                    // Log the exception or handle it as needed
                     System.err.println("Error fetching data for " + cityName + ": " + e.getMessage());
                     return new WeatherForecast("", "", "", Collections.emptyList());
                 }
