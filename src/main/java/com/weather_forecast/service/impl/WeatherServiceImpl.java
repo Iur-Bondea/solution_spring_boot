@@ -4,6 +4,7 @@ import com.weather_forecast.model.WeatherForecast;
 import com.weather_forecast.service.WeatherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
@@ -36,7 +38,7 @@ public class WeatherServiceImpl implements WeatherService {
     public Map<String, WeatherForecast> getForecastForCities(List<String> cities) {
         long startTime = System.currentTimeMillis();
 
-        Map<String, CompletableFuture<WeatherForecast>> futures = new HashMap<>();
+        Map<String, CompletableFuture<WeatherForecast>> futures = new ConcurrentHashMap<>();
 
         for (String cityName : cities) {
             String apiUrl = API_URL.replace("{city_name}", cityName);
