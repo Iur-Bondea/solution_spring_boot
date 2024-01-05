@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.Map;
 
 public interface WeatherServiceReactive {
-    Mono<Map<String, WeatherForecast>> getForecastForCitiesReactive(List<String> cities);
+    Mono<Map<String, Mono<WeatherForecast>>>  getForecastForCitiesReactive(List<String> cities);
 }

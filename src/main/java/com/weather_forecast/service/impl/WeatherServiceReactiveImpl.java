@@ -12,8 +12,10 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 @Service
@@ -24,43 +26,36 @@ public class WeatherServiceReactiveImpl implements WeatherServiceReactive {
     private final RestTemplate restTemplate;
 
     @Autowired
-    @Qualifier("fixedThreadPool")
-    private ExecutorService executorService;
-
-    @Autowired
     public WeatherServiceReactiveImpl(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
     @Override
-    public Mono<Map<String, WeatherForecast>> getForecastForCitiesReactive(List<String> cities) {
+    public Mono<Map<String, Mono<WeatherForecast>>> getForecastForCitiesReactive(List<String> cities) {
         long startTime = System.currentTimeMillis();
 
-        Flux<Map.Entry<String, WeatherForecast>> weatherFlux = Flux.fromIterable(cities)
-                .parallel(6)
-                .runOn(Schedulers.parallel())
-                .flatMap(city -> getWeatherForCity(city))
-                .sequential();
-
-        return weatherFlux.collectMap(Map.Entry::getKey, Map.Entry::getValue)
-                .doOnTerminate(() -> {
-                    long endTime = System.currentTimeMillis();
-                    long executionTime = endTime - startTime;
-                    System.out.println("Total execution time: " + executionTime + " milliseconds");
-                });
+        Map<String, Mono<WeatherForecast>> monoMap = new ConcurrentHashMap<>();
+        cities.forEach(element -> {
+            monoMap.put(element, getWeatherForCity(element));
+        });
+        return Mono.just(monoMap).doOnTerminate(() -> {
+            long endTime = System.currentTimeMillis();
+            long executionTime = endTime - startTime;
+            System.out.println("Total execution time: " + executionTime + " milliseconds");
+        });
     }
 
-    private Mono<Map.Entry<String, WeatherForecast>> getWeatherForCity(String city) {
+    private Mono<WeatherForecast> getWeatherForCity(String city) {
         String apiUrl = API_URL.replace("{city_name}", city);
 
         return Mono.fromCallable(() -> {
             try {
                 ResponseEntity<WeatherForecast> responseEntity = restTemplate.getForEntity(apiUrl, WeatherForecast.class);
-                WeatherForecast weatherForecast = responseEntity.getBody();
-                return Map.entry(city, weatherForecast);
+                return responseEntity.getBody();
+
             } catch (RuntimeException e) {
                 System.err.println("Error fetching data for " + city + ": " + e.getMessage());
-                return Map.entry(city, new WeatherForecast("", "", "", Collections.emptyList()));
+                return new WeatherForecast("", "", "", Collections.emptyList());
             }
         }).subscribeOn(Schedulers.parallel());
     }
